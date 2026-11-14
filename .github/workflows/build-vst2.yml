@@ -1,0 +1,41 @@
+# Copy to .github/workflows/build-vst2.yml in your own GitHub repository.
+name: Build Spectral Audio DeltaForce VST2 (Windows)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build-vst2.yml'
+
+jobs:
+  windows-vst:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download original Spectral Audio source
+        shell: pwsh
+        run: git clone --depth 1 https://github.com/white-give-man/spectral-audio.git spectral-audio
+      - name: Configure x64 Release
+        shell: pwsh
+        run: cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64 -DSPECTRAL_MOCK=OFF -DBUILD_TESTING=ON
+      - name: Build plugin
+        shell: pwsh
+        run: cmake --build build-win --config Release --target SpectralAudio_DeltaForce vst_win_smoke --parallel 4
+      - name: Smoke-test actual AI model via VST host
+        shell: pwsh
+        run: ctest --test-dir build-win --config Release --output-on-failure
+      - name: Check binary entrypoint exports
+        shell: pwsh
+        run: |
+          $file = 'build-win/Release/SpectralAudio_DeltaForce.dll'
+          if (-not (Test-Path $file)) { throw 'Missing VST2 DLL' }
+          $dumpbin = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC/Tools/MSVC/*/bin/Hostx64/x64/dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin not found' }
+          $exports = & $dumpbin /exports $file
+          if (-not ($exports -match 'VSTPluginMain') -or -not ($exports -match ' main')) { throw 'Missing VST entrypoint' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SpectralAudio-DeltaForce-VST2-Win64
+          path: build-win/Release/SpectralAudio_DeltaForce.dll
+          if-no-files-found: error
