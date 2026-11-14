@@ -1,0 +1,4 @@
+LIBRARY SpectralAudio_DeltaForce
+EXPORTS
+    VSTPluginMain
+    main=VSTPluginMain
