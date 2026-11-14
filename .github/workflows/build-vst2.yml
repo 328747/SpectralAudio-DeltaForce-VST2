@@ -24,7 +24,7 @@ jobs:
         run: cmake --build build-win --config Release --target SpectralAudio_DeltaForce vst_win_smoke --parallel 4
       - name: Smoke-test actual AI model via VST host
         shell: pwsh
-        run: ctest --test-dir build-win --config Release --output-on-failure
+        run: ctest --test-dir build-win -C Release --output-on-failure
       - name: Check binary entrypoint exports
         shell: pwsh
         run: |
