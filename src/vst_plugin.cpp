@@ -147,7 +147,7 @@ private:
         wc.lpfnWndProc = editorWndProc;
         wc.hInstance = pluginModule();
         wc.lpszClassName = name;
-        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
         return RegisterClassW(&wc) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS;
     }
