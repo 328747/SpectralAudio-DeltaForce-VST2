@@ -23,6 +23,32 @@ int main(int argc,char** argv){
     check(fx->magic==kVstMagic && fx->numInputs==2 && fx->numOutputs==2,"VST2 stereo ABI");
     check(fx->initialDelay==1024 && fx->numParams==4,"VST2 latency/parameters");
     fx->dispatcher(fx,effOpen,0,0,nullptr,0.0f);
+    // Explicitly exercise the VST2 editor API; the previous build passed
+    // DSP smoke tests but crashed when Equalizer APO requested its GUI.
+    check((fx->flags & (1 << 0)) != 0, "VST2 editor capability flag");
+    struct EditorRect { short top,left,bottom,right; };
+    EditorRect* rect=nullptr;
+    check(fx->dispatcher(fx,13,0,0,&rect,0.0f)!=0 && rect!=nullptr,
+          "effEditGetRect gives a valid rectangle");
+    check(rect->right > rect->left && rect->bottom > rect->top,
+          "VST2 editor dimensions are valid");
+    HWND hostWindow=CreateWindowExW(0,L"STATIC",L"VST host smoke",
+                    WS_OVERLAPPEDWINDOW,0,0,500,400,nullptr,nullptr,
+                    GetModuleHandleW(nullptr),nullptr);
+    check(hostWindow!=nullptr,"Create test host window");
+    check(fx->dispatcher(fx,14,0,0,hostWindow,0.0f)!=0,
+          "effEditOpen works with a host window");
+    HWND editor=FindWindowExW(hostWindow,nullptr,L"SpectralDeltaForceVST2NativeEditorV1",nullptr);
+    check(editor!=nullptr,"Editor child window created");
+    check(SetDlgItemTextW(editor,100,L"75.0")!=0,"Update AI strength field");
+    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(110,BN_CLICKED),
+                 reinterpret_cast<LPARAM>(GetDlgItem(editor,110)));
+    check(std::fabs(fx->getParameter(fx,0)-0.375f)<0.001f,
+          "Apply button updates normalized AI strength");
+    fx->dispatcher(fx,19,0,0,nullptr,0.0f);
+    check(fx->dispatcher(fx,15,0,0,nullptr,0.0f)!=0,
+          "effEditClose closes the editor");
+    DestroyWindow(hostWindow);
     fx->dispatcher(fx,effSetSampleRate,0,0,nullptr,48000.0f);
     fx->dispatcher(fx,effMainsChanged,0,1,nullptr,0.0f);
     constexpr int N=12000;
@@ -63,7 +89,7 @@ int main(int argc,char** argv){
     check(maxAmplitude>0.000001f,"real model produces non-silent sound");
     fx->dispatcher(fx,effClose,0,0,nullptr,0);
     FreeLibrary(lib);
-    std::printf("PASS: Windows x64 VST2 real-model load, DSP output, bypass alignment, non-silent audio.\n");
+    std::printf("PASS: Windows x64 VST2 real model + GUI open/close + DSP + bypass.\n");
     return 0;
 }
 #endif
