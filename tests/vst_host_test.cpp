@@ -17,7 +17,7 @@ int main(int argc,char** argv){
  must(fx!=nullptr,"created effect");
  must(fx->magic==kVstMagic,"VST magic");
  must(fx->numInputs==2 && fx->numOutputs==2,"stereo io");
- must(fx->numParams==4 && fx->initialDelay==1024,"parameters and latency");
+ must(fx->numParams==5 && fx->initialDelay==1024,"parameters and latency");
  must(fx->processReplacing!=nullptr,"process callback");
  char name[128]{};
  must(fx->dispatcher(fx,effGetEffectName,0,0,name,0)==1,"effect name query");
